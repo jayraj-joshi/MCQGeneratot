@@ -1,0 +1,5 @@
+{
+  "name": "NCERT MCQ Generator",
+  "description": "Generate 20 high-quality MCQs from NCERT diagrams and textbook context using AI.",
+  "requestFramePermissions": []
+}
