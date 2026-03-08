@@ -167,7 +167,8 @@ export async function generateMCQsForDiagramBatch(
     - "answer": Must be one of the options.
     - "difficulty": Use "easy", "medium", or "hard".
     - "generated_by": Use "OCM".
-    - "page", "grade", "subject", "topic_number", "topic_name", "chapter_number", "chapter_name", "subtopics_number": Extract these from the NCERT context provided.
+    - STRICT REQUIREMENT FOR TOPIC/SUBTOPIC NUMBERS: You MUST strictly use the exact "topic_number" and "subtopics_number" as they appear in the provided NCERT context. Do NOT alter, infer, format, or change these numbers under any circumstances.
+    - "page", "grade", "subject", "topic_number", "topic_name", "chapter_number", "chapter_name", "subtopics_number": Extract these EXACTLY from the NCERT context provided without modification.
 
     Output the result as a JSON object containing an array "results", where each item has "diagram_id" and its corresponding "questions" array.
   `;
