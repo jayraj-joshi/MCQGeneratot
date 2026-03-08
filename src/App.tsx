@@ -65,7 +65,7 @@ export default function App() {
     setBatches(prev => prev.map(b => b.id === id ? { 
       ...b, 
       context, 
-      contextFileName: fileName ? fileName.split('.')[0] : b.contextFileName 
+      contextFileName: fileName ? fileName.replace(/\.[^/.]+$/, "") : b.contextFileName 
     } : b));
   };
 
@@ -78,6 +78,7 @@ export default function App() {
       id: Math.random().toString(36).substring(7),
       fileName: file.name,
       preview: URL.createObjectURL(file),
+      file: file,
       questions: [],
       status: 'idle' as const,
     }));
@@ -121,12 +122,10 @@ export default function App() {
 
       try {
         const diagramData = await Promise.all(chunk.map(async (diagram) => {
-          const response = await fetch(diagram.preview);
-          const blob = await response.blob();
           const base64 = await new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
+            reader.readAsDataURL(diagram.file);
           });
           return { id: diagram.id, base64, fileName: diagram.fileName };
         }));
@@ -168,19 +167,18 @@ export default function App() {
     
     const zipPromises = batch.diagrams.map(async (diagram) => {
       if (diagram.status === 'success' && diagram.questions.length > 0) {
-        const folderName = `${batch.contextFileName}_${diagram.fileName.split('.')[0]}`;
+        const baseName = diagram.fileName.replace(/\.[^/.]+$/, "");
+        const folderName = `${batch.contextFileName}_${baseName}`;
         const folder = zip.folder(folderName);
 
         if (folder) {
           // Add JSON
-          const jsonFileName = `${batch.contextFileName}_${diagram.fileName.split('.')[0]}.json`;
+          const jsonFileName = `${batch.contextFileName}_${baseName}.json`;
           folder.file(jsonFileName, JSON.stringify(diagram.questions, null, 2));
 
           // Add Image
           try {
-            const response = await fetch(diagram.preview);
-            const blob = await response.blob();
-            folder.file(diagram.fileName, blob);
+            folder.file(diagram.fileName, diagram.file);
           } catch (err) {
             console.error(`Failed to add image ${diagram.fileName} to zip`, err);
           }
@@ -205,26 +203,25 @@ export default function App() {
     if (successfulBatches.length === 0) return;
 
     const allPromises = successfulBatches.map(async (batch) => {
-      const batchFolderName = `batch_${batch.id}_${batch.contextFileName.split('.')[0]}`;
+      const batchFolderName = `batch_${batch.id}_${batch.contextFileName.replace(/\.[^/.]+$/, "")}`;
       const batchFolder = zip.folder(batchFolderName);
       
       if (!batchFolder) return;
 
       const diagramPromises = batch.diagrams.map(async (diagram) => {
         if (diagram.status === 'success' && diagram.questions.length > 0) {
-          const folderName = `${batch.contextFileName}_${diagram.fileName.split('.')[0]}`;
+          const baseName = diagram.fileName.replace(/\.[^/.]+$/, "");
+          const folderName = `${batch.contextFileName}_${baseName}`;
           const folder = batchFolder.folder(folderName);
 
           if (folder) {
             // Add JSON
-            const jsonFileName = `${batch.contextFileName}_${diagram.fileName.split('.')[0]}.json`;
+            const jsonFileName = `${batch.contextFileName}_${baseName}.json`;
             folder.file(jsonFileName, JSON.stringify(diagram.questions, null, 2));
 
             // Add Image
             try {
-              const response = await fetch(diagram.preview);
-              const blob = await response.blob();
-              folder.file(diagram.fileName, blob);
+              folder.file(diagram.fileName, diagram.file);
             } catch (err) {
               console.error(`Failed to add image ${diagram.fileName} to zip`, err);
             }

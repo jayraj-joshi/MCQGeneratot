@@ -25,6 +25,7 @@ export interface DiagramResult {
   id: string;
   fileName: string;
   preview: string;
+  file: File;
   questions: MCQ[];
   status: 'idle' | 'loading' | 'success' | 'error';
   error?: string;
