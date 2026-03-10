@@ -162,38 +162,41 @@ export default function App() {
     setBatches(prev => prev.map(b => b.id === batchId ? { ...b, status: 'success' } : b));
   };
 
-  const downloadZipFromBatch = async (batch: Batch) => {
-    const zip = new JSZip();
-    
-    const zipPromises = batch.diagrams.map(async (diagram) => {
-      if (diagram.status === 'success' && diagram.questions.length > 0) {
-        const baseName = diagram.fileName.replace(/\.[^/.]+$/, "");
-        const folderName = `${batch.contextFileName}_${baseName}`;
-        const folder = zip.folder(folderName);
+  const addDiagramToZip = (zip: JSZip, batch: Batch, diagram: DiagramResult) => {
+    if (diagram.status !== 'success' || diagram.questions.length === 0) return;
 
-        if (folder) {
-          // Add JSON
-          const jsonFileName = `${batch.contextFileName}_${baseName}.json`;
-          folder.file(jsonFileName, JSON.stringify(diagram.questions, null, 2));
+    const baseName = diagram.fileName.replace(/\.[^/.]+$/, "");
+    const folderName = `${batch.contextFileName}_${baseName}`;
+    const folder = zip.folder(folderName);
 
-          // Add Image
-          try {
-            folder.file(diagram.fileName, diagram.file);
-          } catch (err) {
-            console.error(`Failed to add image ${diagram.fileName} to zip`, err);
-          }
-        }
+    if (folder) {
+      // Add JSON
+      const jsonFileName = `${batch.contextFileName}_${baseName}.json`;
+      folder.file(jsonFileName, JSON.stringify(diagram.questions, null, 2));
+
+      // Add Image
+      try {
+        folder.file(diagram.fileName, diagram.file);
+      } catch (err) {
+        console.error(`Failed to add image ${diagram.fileName} to zip`, err);
       }
-    });
+    }
+  };
 
-    await Promise.all(zipPromises);
-
+  const triggerDownload = async (zip: JSZip, filename: string) => {
     const content = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(content);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `batch_${batch.id}_mcqs.zip`;
+    a.download = filename;
     a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  };
+
+  const downloadZipFromBatch = async (batch: Batch) => {
+    const zip = new JSZip();
+    batch.diagrams.forEach(diagram => addDiagramToZip(zip, batch, diagram));
+    await triggerDownload(zip, `batch_${batch.id}_mcqs.zip`);
   };
 
   const downloadAllBatchesZip = async () => {
@@ -202,43 +205,15 @@ export default function App() {
     
     if (successfulBatches.length === 0) return;
 
-    const allPromises = successfulBatches.map(async (batch) => {
-      const batchFolderName = `batch_${batch.id}_${batch.contextFileName.replace(/\.[^/.]+$/, "")}`;
+    successfulBatches.forEach(batch => {
+      const batchFolderName = `batch_${batch.id}_${batch.contextFileName}`;
       const batchFolder = zip.folder(batchFolderName);
-      
-      if (!batchFolder) return;
-
-      const diagramPromises = batch.diagrams.map(async (diagram) => {
-        if (diagram.status === 'success' && diagram.questions.length > 0) {
-          const baseName = diagram.fileName.replace(/\.[^/.]+$/, "");
-          const folderName = `${batch.contextFileName}_${baseName}`;
-          const folder = batchFolder.folder(folderName);
-
-          if (folder) {
-            // Add JSON
-            const jsonFileName = `${batch.contextFileName}_${baseName}.json`;
-            folder.file(jsonFileName, JSON.stringify(diagram.questions, null, 2));
-
-            // Add Image
-            try {
-              folder.file(diagram.fileName, diagram.file);
-            } catch (err) {
-              console.error(`Failed to add image ${diagram.fileName} to zip`, err);
-            }
-          }
-        }
-      });
-      await Promise.all(diagramPromises);
+      if (batchFolder) {
+        batch.diagrams.forEach(diagram => addDiagramToZip(batchFolder, batch, diagram));
+      }
     });
 
-    await Promise.all(allPromises);
-
-    const content = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(content);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `all_batches_mcqs.zip`;
-    a.click();
+    await triggerDownload(zip, `all_batches_mcqs.zip`);
   };
 
   return (
@@ -445,14 +420,10 @@ export default function App() {
                           key={diagram.id} 
                           diagram={diagram} 
                           darkMode={darkMode}
-                          onDownload={() => {
-                            const data = JSON.stringify(diagram.questions, null, 2);
-                            const blob = new Blob([data], { type: 'application/json' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = `${batch.contextFileName}_${diagram.fileName.split('.')[0]}.json`;
-                            a.click();
+                          onDownload={async () => {
+                            const zip = new JSZip();
+                            addDiagramToZip(zip, batch, diagram);
+                            await triggerDownload(zip, `${batch.contextFileName}_${diagram.fileName.split('.')[0]}.zip`);
                           }}
                         />
                       ))}
