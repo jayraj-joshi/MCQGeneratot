@@ -103,8 +103,15 @@ export async function generateMCQsForDiagramBatch(
   results: { [diagramId: string]: MCQ[] }, 
   usage: { promptTokens: number, candidatesTokens: number, totalTokens: number } 
 }> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-  
+  const apiKeys = [
+    process.env.GEMINI_API_KEY_1,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+    process.env.GEMINI_API_KEY_4,
+    process.env.GEMINI_API_KEY_5,
+    process.env.GEMINI_API_KEY, // Fallback to original key if none of the above are set
+  ].filter(Boolean) as string[];
+
   const exams = questionType === 'bdbq' ? '["NEET"]' : '["NEET", "JEE"]';
   const diagramList = diagrams.map(d => `- ID: ${d.id}, Name: ${d.fileName}`).join('\n');
 
@@ -183,56 +190,72 @@ export async function generateMCQsForDiagramBatch(
   const models = ["gemini-3.1-flash-lite-preview", "gemini-2.5-flash", "gemini-3.1-flash-lite-preview"];
   let lastError: any = null;
 
-  for (const modelName of models) {
-    try {
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              ...imageParts
-            ]
-          }
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: BATCH_MCQ_SCHEMA
-        }
-      });
+  for (let i = 0; i < apiKeys.length; i++) {
+    const apiKey = apiKeys[i];
+    const ai = new GoogleGenAI({ apiKey });
+    
+    let allModelsRateLimited = true;
 
-      const text = response.text;
-      if (!text) throw new Error("No response from AI");
-      const parsed = JSON.parse(text);
-      
-      const resultMapping: { [diagramId: string]: MCQ[] } = {};
-      parsed.results.forEach((res: any) => {
-        resultMapping[res.diagram_id] = res.questions;
-      });
-      
-      return {
-        results: resultMapping,
-        usage: {
-          promptTokens: response.usageMetadata?.promptTokenCount || 0,
-          candidatesTokens: response.usageMetadata?.candidatesTokenCount || 0,
-          totalTokens: response.usageMetadata?.totalTokenCount || 0
+    for (const modelName of models) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                ...imageParts
+              ]
+            }
+          ],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: BATCH_MCQ_SCHEMA
+          }
+        });
+
+        const text = response.text;
+        if (!text) throw new Error("No response from AI");
+        const parsed = JSON.parse(text);
+        
+        const resultMapping: { [diagramId: string]: MCQ[] } = {};
+        parsed.results.forEach((res: any) => {
+          resultMapping[res.diagram_id] = res.questions;
+        });
+        
+        return {
+          results: resultMapping,
+          usage: {
+            promptTokens: response.usageMetadata?.promptTokenCount || 0,
+            candidatesTokens: response.usageMetadata?.candidatesTokenCount || 0,
+            totalTokens: response.usageMetadata?.totalTokenCount || 0
+          }
+        };
+      } catch (e: any) {
+        lastError = e;
+        const isRateLimit = e.status === 429 || 
+                           e.message?.includes('429') || 
+                           e.message?.toLowerCase().includes('rate limit');
+        
+        if (isRateLimit) {
+          console.warn(`Key ${i + 1}/${apiKeys.length} - Model ${modelName} failed with 429. Trying next model...`);
+          continue;
         }
-      };
-    } catch (e: any) {
-      lastError = e;
-      const isRateLimit = e.status === 429 || 
-                         e.message?.includes('429') || 
-                         e.message?.toLowerCase().includes('rate limit');
-      
-      if (isRateLimit) {
-        console.warn(`Model ${modelName} failed with 429. Retrying with next fallback...`);
-        continue;
+        
+        // If it's not a rate limit error, we might still want to try fallback models,
+        // but we marks this key as "not just rate limited" if we want to stop early?
+        // Let's assume we continue with models regardless, but only rotate KEY on rate limit.
+        allModelsRateLimited = false;
+        console.error(`Error with model ${modelName}:`, e);
+        // However, if one model fails with non-429, maybe the other models will too.
+        // But let's stay focused on the 429 rotation.
       }
-      // If it's not a rate limit error, we might still want to try fallback if the user implies general resilience,
-      // but they specifically asked for 429 logic.
-      throw e;
+    }
+
+    if (i < apiKeys.length - 1) {
+      console.warn(`All models failed or rate limited with Key ${i + 1}. Rotating to next API key...`);
     }
   }
 
-  throw lastError || new Error("Failed to generate MCQs after all fallbacks.");
+  throw lastError || new Error("Failed to generate MCQs after all keys and models exhausted.");
 }
