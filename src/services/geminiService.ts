@@ -130,7 +130,6 @@ export async function generateMCQsForDiagramBatch(
     ### CDBQ Specific Constraints:
     - Task: Analyze the provided chemical reaction diagram and generate Multiple Choice Questions (MCQs).
     - Visual Dependency: The questions must be designed so that the student must refer to the diagram to answer. Avoid general "textbook" trivia that can be answered without the image.
-    - No Color References: Assume the diagram will be printed in black and white. Do not refer to "pink," "blue," or highlighted parts. Instead, refer to "the intermediate," "the reagent over the arrow," or "the side chain."
     - Mandatory IUPAC Question: when diagram contains only a single molecules or multiple molecues but no reactions include at least one question regarding the systematic IUPAC naming for each moclecule.
     - Structural Analysis: Include questions that require:
       - Counting specific atoms or groups (e.g., "How many methyl groups are in the byproduct?").
@@ -197,6 +196,12 @@ export async function generateMCQsForDiagramBatch(
 
     4. Scientific Precision
     The phrasing must be technically exact according to the text provided. Use standard ${scienceType} nomenclature.
+
+    5. Black-and-White Printing Rule (NO COLOR REFERENCES - MANDATORY)
+    Assume every diagram will be printed purely in black and white for the final exam. Do NOT use colors to identify parts of the diagram or chart in your questions or options.
+    - AVOID: "Which color bar represents...", "Which class corresponds to the red bars...", or finding "the green area."
+    - DO USE: Labels, letters, positions (top, bottom, left, right), size differences, shapes, axis labels, or chemical/biological names (e.g., "the tallest bar", "the class labeled X", "the leftmost structure", "the intermediate").
+
     ${specificConstraints}
 
     ### CRITICAL INSTRUCTIONS FOR JSON FIELDS:
