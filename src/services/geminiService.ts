@@ -122,7 +122,7 @@ export async function generateMCQsForDiagramBatch(
   let scienceType = '';
 
   if (questionType === 'cdbq') {
-    roleAndTask = 'You are an expert curriculum developer and assessment specialist in Chemistry. Your task is to analyze the provided chemical reaction diagram and generate 20 high-quality, scientifically accurate multiple-choice questions (MCQs) for EACH of the provided diagrams.';
+    roleAndTask = 'You are an expert curriculum developer and assessment specialist in Chemistry. Your task is to analyze the provided chemical reaction diagram and generate a comprehensive set of high-quality, scientifically accurate multiple-choice questions (MCQs) for EACH of the provided diagrams.';
     visualType = 'chemical structures or reactions';
     contextType = 'reactions, properties, and concepts';
     scienceType = 'chemical';
@@ -141,7 +141,7 @@ export async function generateMCQsForDiagramBatch(
     - Stoichiometry: Ask about the molar ratios or the number of products formed based on the visual equation.
     `;
   } else {
-    roleAndTask = 'You are an expert curriculum developer and assessment specialist in Biology. Your task is to generate 20 high-quality, scientifically accurate multiple-choice questions (MCQs) for EACH of the provided diagrams.';
+    roleAndTask = 'You are an expert curriculum developer and assessment specialist in Biology. Your task is to generate a comprehensive set of high-quality, scientifically accurate multiple-choice questions (MCQs) for EACH of the provided diagrams.';
     visualType = 'biological structures';
     contextType = 'anatomy, function, and classification';
     scienceType = 'biological';
@@ -164,11 +164,11 @@ export async function generateMCQsForDiagramBatch(
     QUESTION TYPE REQUESTED: ${questionType}
 
     ### IMPORTANT: Mapping Questions to Diagrams
-    You MUST generate a separate set of 20 questions for EACH diagram provided. 
+    You MUST generate a separate set of questions for EACH diagram provided. 
     In the output JSON, you must map each set of questions to the correct "diagram_id" provided in the list above.
 
     ### Question Creation Requirements (Per Diagram)
-    Each of the 20 questions must meet these strict criteria:
+    Each of the questions must meet these strict criteria:
 
     1. Diagram-Centric Integration (MANDATORY)
     Every question MUST explicitly reference the specific diagram or figure (e.g., "In the provided diagram," "As illustrated in the figure"). The questions should be unanswerable without looking at the image.
@@ -208,8 +208,8 @@ export async function generateMCQsForDiagramBatch(
     - "answer": Must be one of the options.
     - "difficulty": Use "easy", "medium", or "hard".
     - "generated_by": Use "OCM".
-    - STRICT REQUIREMENT FOR TOPIC/SUBTOPIC NUMBERS: You MUST strictly use the exact "topic_number" and "subtopics_number" as they appear in the provided NCERT context. Do NOT alter, infer, format, or change these numbers under any circumstances.
-    - "page", "grade", "subject", "topic_number", "topic_name", "chapter_number", "chapter_name", "subtopics_number": Extract these EXACTLY from the NCERT context provided without modification.
+    - STRICT REQUIREMENT FOR TOPIC/SUBTOPIC NUMBERS: You MUST strictly use the exact "topic_number" and "subtopics_number" exactly as they appear in the provided text JSON. Do NOT alter, infer, format, or change these numbers under any circumstances. They must be exact matches to the provided text.
+    - "page", "grade", "subject", "topic_number", "topic_name", "chapter_number", "chapter_name", "subtopics_number": Extract these EXACTLY from the provided text context without modification.
 
     Output the result as a JSON object containing an array "results", where each item has "diagram_id" and its corresponding "questions" array.
   `;
