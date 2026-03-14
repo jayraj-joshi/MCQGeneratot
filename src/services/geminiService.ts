@@ -115,12 +115,45 @@ export async function generateMCQsForDiagramBatch(
   const exams = questionType === 'bdbq' ? '["NEET"]' : '["NEET", "JEE"]';
   const diagramList = diagrams.map(d => `- ID: ${d.id}, Name: ${d.fileName}`).join('\n');
 
+  let roleAndTask = '';
+  let specificConstraints = '';
+  let visualType = '';
+  let contextType = '';
+  let scienceType = '';
+
+  if (questionType === 'cdbq') {
+    roleAndTask = 'You are an expert curriculum developer and assessment specialist in Chemistry. Your task is to analyze the provided chemical reaction diagram and generate 20 high-quality, scientifically accurate multiple-choice questions (MCQs) for EACH of the provided diagrams.';
+    visualType = 'chemical structures or reactions';
+    contextType = 'reactions, properties, and concepts';
+    scienceType = 'chemical';
+    specificConstraints = `
+    ### CDBQ Specific Constraints:
+    - Task: Analyze the provided chemical reaction diagram and generate Multiple Choice Questions (MCQs).
+    - Visual Dependency: The questions must be designed so that the student must refer to the diagram to answer. Avoid general "textbook" trivia that can be answered without the image.
+    - No Color References: Assume the diagram will be printed in black and white. Do not refer to "pink," "blue," or highlighted parts. Instead, refer to "the intermediate," "the reagent over the arrow," or "the side chain."
+    - Mandatory IUPAC Question: when diagram contains only a single molecules or multiple molecues but no reactions include at least one question regarding the systematic IUPAC naming for each moclecule.
+    - Structural Analysis: Include questions that require:
+      - Counting specific atoms or groups (e.g., "How many methyl groups are in the byproduct?").
+      - Identifying hybridization of specific carbons shown in the structures.
+      - Identifying the functional groups present in the intermediate vs. the products.
+      - Tracking the "movement" of atoms (e.g., "Which part of the side chain becomes the carbonyl group in the byproduct?").
+    - Reagents and Conditions: Ask about the reagents (O2, H+, etc.) specifically as they appear in the sequence.
+    - Stoichiometry: Ask about the molar ratios or the number of products formed based on the visual equation.
+    `;
+  } else {
+    roleAndTask = 'You are an expert curriculum developer and assessment specialist in Biology. Your task is to generate 20 high-quality, scientifically accurate multiple-choice questions (MCQs) for EACH of the provided diagrams.';
+    visualType = 'biological structures';
+    contextType = 'anatomy, function, and classification';
+    scienceType = 'biological';
+    specificConstraints = '';
+  }
+
   const prompt = `
-    You are an expert curriculum developer and assessment specialist in Biology. Your task is to generate 20 high-quality, scientifically accurate multiple-choice questions (MCQs) for EACH of the provided diagrams.
+    ${roleAndTask}
     
     You are provided with:
-    1. Multiple Diagrams/Figures: Visual representations of biological structures.
-    2. Textbook/Reference Text: Excerpts from a textbook detailing the anatomy, function, and classification related to the diagrams.
+    1. Multiple Diagrams/Figures: Visual representations of ${visualType}.
+    2. Textbook/Reference Text: Excerpts from a textbook detailing the ${contextType} related to the diagrams.
 
     TEXTBOOK CONTEXT:
     ${ncertContext}
@@ -157,13 +190,14 @@ export async function generateMCQsForDiagramBatch(
     Generate a mix of difficulty levels:
     - 30% Easy/Recall: Identification of structures and labels shown clearly in both sources.
     - 40% Intermediate/Conceptual: Connecting visual evidence to functional explanations.
-    - 30% Advanced/Analytical: Comparing different structures based on biological rules, or identifying misconceptions.
+    - 30% Advanced/Analytical: Comparing different structures based on ${scienceType} rules, or identifying misconceptions.
 
     3. Plausible Distractors (Wrong Answers)
-    Do not use "None of the above" or "All of the above." Distractors must be common biological misconceptions or logical misinterpretations. For advanced questions, use complex multiple-selection distractors (e.g., "Statements I and III only").
+    Do not use "None of the above" or "All of the above." Distractors must be common ${scienceType} misconceptions or logical misinterpretations. For advanced questions, use complex multiple-selection distractors (e.g., "Statements I and III only").
 
     4. Scientific Precision
-    The phrasing must be technically exact according to the text provided. Use standard biological nomenclature.
+    The phrasing must be technically exact according to the text provided. Use standard ${scienceType} nomenclature.
+    ${specificConstraints}
 
     ### CRITICAL INSTRUCTIONS FOR JSON FIELDS:
     - "exam": Use ${exams}
