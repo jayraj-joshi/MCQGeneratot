@@ -163,12 +163,12 @@ export async function generateMCQsForDiagramBatch(
 
     QUESTION TYPE REQUESTED: ${questionType}
 
-    ### IMPORTANT: Mapping Questions to Diagrams
-    You MUST generate a separate set of questions for EACH diagram provided. 
-    In the output JSON, you must map each set of questions to the correct "diagram_id" provided in the list above.
+    ### CRITICAL REQUIREMENT: VOLUME AND MAPPING
+    You MUST generate exactly 20 questions for EACH diagram provided in the list. Do NOT generate less than 20 questions per diagram. Do NOT skip any diagrams. If there are 3 diagrams, you must generate 60 questions in total (20 per diagram).
+    In the output JSON, you must map each set of 20 questions to the correct "diagram_id" provided in the list above.
 
     ### Question Creation Requirements (Per Diagram)
-    Each of the questions must meet these strict criteria:
+    Each of the 20 questions must meet these strict criteria:
 
     1. Diagram-Centric Integration (MANDATORY)
     Every question MUST explicitly reference the specific diagram or figure (e.g., "In the provided diagram," "As illustrated in the figure"). The questions should be unanswerable without looking at the image.
